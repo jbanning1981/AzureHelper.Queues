@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Ardalis.GuardClauses;
 using Azure.Storage.Queues;
 using AzureStorage.Core.Interfaces;
 
@@ -7,11 +9,17 @@ namespace AzureStorage.Service
 {
     public class QueueService : IQueueService
     {
-        private QueueServiceClient queueClient;
+        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly QueueServiceClient _queueClient;
 
         public QueueService(IQueueConfiguration queueConfiguration)
         {
-            queueClient = new QueueServiceClient(queueConfiguration.ConnectionString);
+            Guard.Against.Null(queueConfiguration, nameof(queueConfiguration));
+            Guard.Against.NullOrWhiteSpace(queueConfiguration?.ConnectionString, nameof(queueConfiguration.ConnectionString));
+
+            var tokenSource = new CancellationTokenSource();
+            _queueConfiguration = queueConfiguration;
+            _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString);
         }
 
         public Task AddMessageAsync(string queueName, string message)
@@ -23,7 +31,12 @@ namespace AzureStorage.Service
 
         private QueueClient GetQueueClient(string queueName)
         {
-            return queueClient.GetQueueClient(queueName);
+
+            var client =  _queueClient.GetQueueClient(queueName);
+
+            return client;
+
+
         }
 
         public Task AddMessageAsync(string queueName, object itemToSend)
