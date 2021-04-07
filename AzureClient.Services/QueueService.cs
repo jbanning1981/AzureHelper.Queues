@@ -17,26 +17,37 @@ namespace AzureStorage.Service
             Guard.Against.Null(queueConfiguration, nameof(queueConfiguration));
             Guard.Against.NullOrWhiteSpace(queueConfiguration?.ConnectionString, nameof(queueConfiguration.ConnectionString));
 
-            var tokenSource = new CancellationTokenSource();
+
             _queueConfiguration = queueConfiguration;
             _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString);
         }
 
-        public Task AddMessageAsync(string queueName, string message)
+        public async Task AddMessageAsync(string queueName, string message)
         {
-            var client = GetQueueClient(queueName);
-
-            throw new NotImplementedException();
+            var client = await GetQueueClient(queueName);
+            await client.SendMessageAsync(message, GetCancellationToken());
         }
 
-        private QueueClient GetQueueClient(string queueName)
+        private async Task<QueueClient> GetQueueClient(string queueName)
         {
 
             var client =  _queueClient.GetQueueClient(queueName);
 
+            if(!(await client.ExistsAsync()) && !_queueConfiguration.AutomaticallyCreateQueues)
+            {
+                var errMsg = $"The specified queue {queueName} does not exist, and the service is not configured to create missing queues. Enable {nameof(_queueConfiguration.AutomaticallyCreateQueues)} if you would like the service to create missing queues.";
+                throw new InvalidOperationException(errMsg);
+            }
+
+            await client.CreateIfNotExistsAsync();
+
             return client;
+        }
 
-
+        private CancellationToken GetCancellationToken()
+        {
+            var tokenSource = new CancellationTokenSource(_queueConfiguration.CancellationTimeoutInMs);
+            return tokenSource.Token;
         }
 
         public Task AddMessageAsync(string queueName, object itemToSend)

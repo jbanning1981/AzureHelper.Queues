@@ -15,7 +15,7 @@ namespace AzureStorage.Core.Interfaces
         /// <summary>
         /// When enabled, will create a queue if none exists
         /// </summary>
-        bool CreateQueueIfNotExists { get; init; }
-        int CancellationTimeout { get; init; } 
+        bool AutomaticallyCreateQueues { get; init; }
+        int CancellationTimeoutInMs { get; init; } 
     }
 }
