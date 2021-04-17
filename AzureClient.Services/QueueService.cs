@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Azure.Storage.Queues;
+using AzureClient.Core.Interfaces;
+using AzureClient.Core.Models;
 using AzureStorage.Core.Interfaces;
 
 namespace AzureStorage.Service
@@ -11,21 +16,17 @@ namespace AzureStorage.Service
     {
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly QueueServiceClient _queueClient;
+        private readonly ISerializer _serializer;
 
-        public QueueService(IQueueConfiguration queueConfiguration)
+        public QueueService(IQueueConfiguration queueConfiguration, ISerializer serializer)
         {
             Guard.Against.Null(queueConfiguration, nameof(queueConfiguration));
             Guard.Against.NullOrWhiteSpace(queueConfiguration?.ConnectionString, nameof(queueConfiguration.ConnectionString));
 
 
             _queueConfiguration = queueConfiguration;
-            _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString);
-        }
-
-        public async Task AddMessageAsync(string queueName, string message)
-        {
-            var client = await GetQueueClient(queueName);
-            await client.SendMessageAsync(message, GetCancellationToken());
+            _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString, new QueueClientOptions() { MessageEncoding = queueConfiguration.DefaultMessageEncoding });
+            _serializer = serializer;
         }
 
         private async Task<QueueClient> GetQueueClient(string queueName)
@@ -50,39 +51,88 @@ namespace AzureStorage.Service
             return tokenSource.Token;
         }
 
-        public Task AddMessageAsync(string queueName, object itemToSend)
+        public async Task<IMessageDetail> AddMessageAsync(string queueName, string message)
         {
+            var client = await GetQueueClient(queueName);
+
+            var receipt = await client.SendMessageAsync(message, GetCancellationToken());
+
+            return new MessageDetail()
+            {
+                Id = receipt.Value.MessageId,
+                Receipt = receipt.Value.PopReceipt
+            };
+        }
+
+        public async Task<IMessageDetail> AddMessageAsync(string queueName, object itemToSend)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            Guard.Against.Null(itemToSend, nameof(itemToSend));
+
+            var client = await GetQueueClient(queueName);
+
+            var msg = _serializer.Serialize(itemToSend);
+
+            var receipt = await client.SendMessageAsync(msg, GetCancellationToken());
+
+            return new MessageDetail()
+            {
+                Id = receipt.Value.MessageId,
+                Receipt = receipt.Value.PopReceipt
+            };
+        }
+
+        public async Task<bool> DoesMessageExistAsync(string queueName, string messageContent)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+            var client = await GetQueueClient(queueName);
+
+            var messages = await client.PeekMessagesAsync();
+
+
             throw new NotImplementedException();
         }
 
-        public Task<bool> DoesMessageExistAsync(string queueName, string messageContent)
+        public async Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck)
         {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+            var client = await GetQueueClient(queueName);
+
+            var messages = await client.PeekMessagesAsync();
+
+
             throw new NotImplementedException();
+
+
         }
 
-        public Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck)
+        public async Task<bool> RemoveMessageAsync(string queueName, string messageId, string receiptId)
         {
-            throw new NotImplementedException();
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+            var client = await GetQueueClient(queueName);
+
+            var result = await client.DeleteMessageAsync(messageId, receiptId, GetCancellationToken());
+
+            return result.Status == (int)HttpStatusCode.NoContent;
+
         }
 
-        public Task<bool> DoesMessageIdExistAsync(string messageId)
+        public async Task<bool> DoesMessageIdExistAsync(string queueName, string messageId)
         {
-            throw new NotImplementedException();
-        }
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
-        public Task RemoveMessageAsync(string messageId)
-        {
-            throw new NotImplementedException();
-        }
+            var client = await GetQueueClient(queueName);
 
-        public Task RemoveMessageAsync(string queueName, string messageId)
-        {
-            throw new NotImplementedException();
-        }
+            var messages = await client.PeekMessagesAsync();
 
-        public Task<bool> DoesMessageIdExistAsync(string queueName, string messageId)
-        {
-            throw new NotImplementedException();
+            return messages.Value.Any(v => v.MessageId == messageId);
+
+
+
+
         }
     }
 }

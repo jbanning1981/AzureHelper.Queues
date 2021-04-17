@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Azure.Storage.Queues;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,7 @@ namespace AzureStorage.Core.Interfaces
         /// When enabled, will create a queue if none exists
         /// </summary>
         bool AutomaticallyCreateQueues { get; init; }
-        int CancellationTimeoutInMs { get; init; } 
+        int CancellationTimeoutInMs { get; init; }
+        QueueMessageEncoding DefaultMessageEncoding { get; init; }
     }
 }

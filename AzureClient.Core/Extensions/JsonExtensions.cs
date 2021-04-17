@@ -13,7 +13,7 @@ namespace AzureStorage.Domain.Extensions
             return JsonSerializer.Serialize(objectToSerialize);
         }
 
-        public static T FromJson<T>(this string serializedObject) where T: new()
+        public static T FromJson<T>(this string serializedObject)
         {
             return JsonSerializer.Deserialize<T>(serializedObject);
         }
