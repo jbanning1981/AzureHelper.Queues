@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AzureClient.Core.Models
 {
-    public class MessageDetail : IMessageDetail
+    public class QueueMessage : IQueueMessage
     {
         public string Id { get; set; }
         public string Receipt { get; set; }

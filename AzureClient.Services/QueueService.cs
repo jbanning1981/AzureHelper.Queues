@@ -32,9 +32,9 @@ namespace AzureStorage.Service
         private async Task<QueueClient> GetQueueClient(string queueName)
         {
 
-            var client =  _queueClient.GetQueueClient(queueName);
+            var client = _queueClient.GetQueueClient(queueName);
 
-            if(!(await client.ExistsAsync()) && !_queueConfiguration.AutomaticallyCreateQueues)
+            if (!(await client.ExistsAsync()) && !_queueConfiguration.AutomaticallyCreateQueues)
             {
                 var errMsg = $"The specified queue {queueName} does not exist, and the service is not configured to create missing queues. Enable {nameof(_queueConfiguration.AutomaticallyCreateQueues)} if you would like the service to create missing queues.";
                 throw new InvalidOperationException(errMsg);
@@ -51,20 +51,20 @@ namespace AzureStorage.Service
             return tokenSource.Token;
         }
 
-        public async Task<IMessageDetail> AddMessageAsync(string queueName, string message)
+        public async Task<IQueueMessage> AddMessageAsync(string queueName, string message)
         {
             var client = await GetQueueClient(queueName);
 
             var receipt = await client.SendMessageAsync(message, GetCancellationToken());
 
-            return new MessageDetail()
+            return new QueueMessage()
             {
                 Id = receipt.Value.MessageId,
                 Receipt = receipt.Value.PopReceipt
             };
         }
 
-        public async Task<IMessageDetail> AddMessageAsync(string queueName, object itemToSend)
+        public async Task<IQueueMessage> AddMessageAsync(string queueName, object itemToSend)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             Guard.Against.Null(itemToSend, nameof(itemToSend));
@@ -75,7 +75,7 @@ namespace AzureStorage.Service
 
             var receipt = await client.SendMessageAsync(msg, GetCancellationToken());
 
-            return new MessageDetail()
+            return new QueueMessage()
             {
                 Id = receipt.Value.MessageId,
                 Receipt = receipt.Value.PopReceipt
@@ -90,8 +90,15 @@ namespace AzureStorage.Service
 
             var messages = await client.PeekMessagesAsync();
 
+            foreach (var msg in messages.Value)
+            {
+                if (messageContent.Equals(msg.Body?.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
 
-            throw new NotImplementedException();
+            return false;
         }
 
         public async Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck)
@@ -100,11 +107,9 @@ namespace AzureStorage.Service
 
             var client = await GetQueueClient(queueName);
 
-            var messages = await client.PeekMessagesAsync();
+            var serializedObject = _serializer.Serialize(itemToCheck);
 
-
-            throw new NotImplementedException();
-
+            return await DoesMessageExistAsync(queueName, serializedObject);
 
         }
 
@@ -116,7 +121,7 @@ namespace AzureStorage.Service
 
             var result = await client.DeleteMessageAsync(messageId, receiptId, GetCancellationToken());
 
-            return result.Status == (int)HttpStatusCode.NoContent;
+            return result?.Status == (int)HttpStatusCode.NoContent;
 
         }
 
@@ -129,9 +134,6 @@ namespace AzureStorage.Service
             var messages = await client.PeekMessagesAsync();
 
             return messages.Value.Any(v => v.MessageId == messageId);
-
-
-
 
         }
     }
