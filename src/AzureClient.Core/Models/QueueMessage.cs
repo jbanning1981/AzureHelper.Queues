@@ -11,5 +11,6 @@ namespace AzureClient.Core.Models
     {
         public string Id { get; set; }
         public string Receipt { get; set; }
+        public string Body { get; set; }
     }
 }

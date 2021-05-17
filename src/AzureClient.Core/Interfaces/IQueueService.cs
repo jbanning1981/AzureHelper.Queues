@@ -2,12 +2,12 @@ using AzureClient.Core.Interfaces;
 using System;
 using System.Threading.Tasks;
 
-namespace AzureStorage.Core.Interfaces
+namespace AzureClient.Core.Interfaces
 {
     public interface IQueueService
     {
         Task<IQueueMessage> AddMessageAsync(string queueName, string message);
-        Task<IQueueMessage> AddMessageAsync(string queueName, object itemToSend);
+        Task<IQueueMessage> AddMessageAsync<T>(string queueName, T itemToSend);
         Task<bool> RemoveMessageAsync(string queueName, string messageId, string receiptId);
         Task<bool> DoesMessageExistAsync(string queueName, string messageContent);
         Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck);

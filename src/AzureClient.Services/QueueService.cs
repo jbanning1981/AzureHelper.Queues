@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -6,11 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Azure.Storage.Queues;
+using AzureClient.Core;
 using AzureClient.Core.Interfaces;
 using AzureClient.Core.Models;
-using AzureStorage.Core.Interfaces;
+using AzureClient.Services.Serializers;
 
-namespace AzureStorage.Service
+namespace AzureClient.Services
 {
     public class QueueService : IQueueService
     {
@@ -18,16 +21,56 @@ namespace AzureStorage.Service
         private readonly QueueServiceClient _queueClient;
         private readonly ISerializer _serializer;
 
-        public QueueService(IQueueConfiguration queueConfiguration, ISerializer serializer)
+        public QueueService(IQueueConfiguration queueConfiguration, ISerializer serializer = null)
+        {
+            ValidateConfiguration(queueConfiguration, serializer);
+
+            _queueConfiguration = queueConfiguration;
+            _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString, new QueueClientOptions() { MessageEncoding = queueConfiguration.DefaultMessageEncoding });
+            _serializer = GetSerializer(queueConfiguration, serializer);
+        }
+
+        private static void ValidateConfiguration(IQueueConfiguration queueConfiguration, ISerializer serializer)
         {
             Guard.Against.Null(queueConfiguration, nameof(queueConfiguration));
             Guard.Against.NullOrWhiteSpace(queueConfiguration?.ConnectionString, nameof(queueConfiguration.ConnectionString));
 
+            if(queueConfiguration.MessageSerializer == QueueMessageSerializer.External && serializer == null)
+            {
+                throw new ArgumentException(nameof(serializer), $"{nameof(IQueueConfiguration.MessageSerializer)} is set to {QueueMessageSerializer.External}, but no serializer was provided.");
+            }
 
-            _queueConfiguration = queueConfiguration;
-            _queueClient = new QueueServiceClient(queueConfiguration.ConnectionString, new QueueClientOptions() { MessageEncoding = queueConfiguration.DefaultMessageEncoding });
-            _serializer = serializer;
+            if (queueConfiguration.MessageSerializer == QueueMessageSerializer.Newtonsoft && queueConfiguration.OptionalSerializeSettings != null && queueConfiguration.OptionalSerializeSettings.GetType() != typeof(Newtonsoft.Json.JsonSerializerSettings))
+            {
+                var errMsg = $@"Invalid serializer settings. {nameof(IQueueConfiguration.MessageSerializer)} is set to {QueueMessageSerializer.Newtonsoft}. 
+                                {nameof(QueueService)} expected settings of type {typeof(Newtonsoft.Json.JsonSerializerSettings).Name}, but the provided serializer was type {queueConfiguration.OptionalSerializeSettings.GetType().Name}";
+                throw new ArgumentException(nameof(queueConfiguration.OptionalSerializeSettings), errMsg);
+            }
+
+            if (queueConfiguration.MessageSerializer == QueueMessageSerializer.SystemTextJson && queueConfiguration.OptionalSerializeSettings != null && queueConfiguration.OptionalSerializeSettings.GetType() != typeof(System.Text.Json.JsonSerializerOptions))
+            {
+                var errMsg = $@"Invalid serializer settings. {nameof(IQueueConfiguration.MessageSerializer)} is set to {QueueMessageSerializer.SystemTextJson}. 
+                                {nameof(QueueService)} expected settings of type {typeof(System.Text.Json.JsonSerializerOptions).Name}, but the provided serializer was type {queueConfiguration.OptionalSerializeSettings.GetType().Name}";
+                throw new ArgumentException(nameof(queueConfiguration.OptionalSerializeSettings), errMsg);
+            }
+
         }
+
+        private ISerializer GetSerializer(IQueueConfiguration queueConfiguration, ISerializer serializer)
+        {
+            switch (queueConfiguration.MessageSerializer)
+            {
+                case QueueMessageSerializer.Newtonsoft:
+                    return new NewtonsoftSerializer(queueConfiguration.OptionalSerializeSettings as Newtonsoft.Json.JsonSerializerSettings);
+                case QueueMessageSerializer.SystemTextJson:
+                    return new SystemTextJsonSerializer(queueConfiguration.OptionalSerializeSettings as System.Text.Json.JsonSerializerOptions);
+                case QueueMessageSerializer.External:
+                    return serializer;
+                default:
+                    throw new InvalidOperationException($"No serializer available for {nameof(QueueService)}");
+            }
+        }
+
 
         private async Task<QueueClient> GetQueueClient(string queueName)
         {
@@ -64,7 +107,7 @@ namespace AzureStorage.Service
             };
         }
 
-        public async Task<IQueueMessage> AddMessageAsync(string queueName, object itemToSend)
+        public async Task<IQueueMessage> AddMessageAsync<T>(string queueName, T itemToSend)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             Guard.Against.Null(itemToSend, nameof(itemToSend));

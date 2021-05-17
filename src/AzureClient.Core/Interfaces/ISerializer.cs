@@ -8,7 +8,7 @@ namespace AzureClient.Core.Interfaces
 {
     public interface ISerializer
     {
-        T Deserialize<T>(string serializedItem);
-        string Serialize<T>(T itemToSerialize);
+        T Deserialize<T>(string serializedItem, object serializationSettings = null);
+        string Serialize<T>(T itemToSerialize, object serializationSettings = null);
     }
 }
