@@ -16,10 +16,8 @@ namespace AzureClient.Core.Models
         public string ConnectionString { get; init; }
         public bool AutomaticallyCreateQueues { get ; init; }
         public int CancellationTimeoutInMs { get; init; } = 30000;
-        public QueueMessageEncoding DefaultMessageEncoding { get; init; } = QueueMessageEncoding.Base64;
-
-        public QueueMessageSerializer MessageSerializer { get ; init ; } = QueueMessageSerializer.SystemTextJson;
-
-        public object OptionalSerializeSettings { get; init; } = new JsonSerializerOptions();
+        public QueueMessageEncoding DefaultMessageEncoding { get; init; }
+        public QueueMessageSerializer MessageSerializer { get ; init ; }
+        public object OptionalSerializeSettings { get; init; }
     }
 }
