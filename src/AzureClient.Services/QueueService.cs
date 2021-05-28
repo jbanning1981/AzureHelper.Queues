@@ -125,6 +125,16 @@ namespace AzureClient.Services
             };
         }
 
+        public async Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+            var serializedObject = _serializer.Serialize(itemToCheck);
+
+            return await DoesMessageExistAsync(queueName, serializedObject);
+        }
+
+
         public async Task<bool> DoesMessageExistAsync(string queueName, string messageContent)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
@@ -144,17 +154,6 @@ namespace AzureClient.Services
             return false;
         }
 
-        public async Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck)
-        {
-            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
-
-            var client = await GetQueueClient(queueName);
-
-            var serializedObject = _serializer.Serialize(itemToCheck);
-
-            return await DoesMessageExistAsync(queueName, serializedObject);
-
-        }
 
         public async Task<bool> RemoveMessageAsync(string queueName, string messageId, string receiptId)
         {
@@ -179,5 +178,58 @@ namespace AzureClient.Services
             return messages.Value.Any(v => v.MessageId == messageId);
 
         }
+
+        public async Task<IQueueMessage<T>> GetNextMessageAsync<T>(string queueName)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+
+            var client = await GetQueueClient(queueName);
+
+            var msg = await client.ReceiveMessageAsync();
+
+            var queueMessage = new QueueMessage<T>
+            {
+                Id = msg.Value.MessageId,
+                Receipt = msg.Value.PopReceipt,
+                Data = _serializer.Deserialize<T>(msg.Value.Body.ToString())
+            };
+
+            await client.DeleteMessageAsync(msg.Value.MessageId, msg.Value.PopReceipt);
+
+            return queueMessage;
+        }
+
+        public async Task<IQueueMessage<T>> GetMessageAsync<T>(string queueName, string messageId)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+
+            var client = await GetQueueClient(queueName);
+
+            var messages = await client.ReceiveMessagesAsync();
+
+            foreach(var msg in messages.Value)
+            {
+                if(msg.MessageId == messageId)
+                {
+                    var queueMessage = new QueueMessage<T>
+                    {
+                        Id = msg.MessageId,
+                        Receipt = msg.PopReceipt,
+                        Data = _serializer.Deserialize<T>(msg.Body.ToString())
+                    };
+
+                    await client.DeleteMessageAsync(msg.MessageId, msg.PopReceipt);
+
+                    return queueMessage;
+                }
+
+                await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
+            }
+
+            return null;
+
+        }
+
     }
 }

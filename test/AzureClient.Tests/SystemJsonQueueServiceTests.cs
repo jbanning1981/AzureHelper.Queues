@@ -8,15 +8,13 @@ using Xunit;
 namespace AzureClient.Tests
 {
     [Trait("Category", "Integration_Local")]
-    public class NewtonsoftQueueServiceTests : BaseQueueServiceTest
+    public class SystemJsonQueueServiceTests : BaseQueueServiceTest
     {
-
-
-        public NewtonsoftQueueServiceTests()
+        public SystemJsonQueueServiceTests()
         {
-            _queueConfig = GetConfiguration();
+            _queueConfig = GetConfiguration(Core.QueueMessageSerializer.SystemTextJson);
             _queueService = new QueueService(_queueConfig);
-            _queueName = "newtonsoft-test-queue";
+            _queueName = "system-json-test-queue";
             _queueClient = GetQueueClient();
         }
 

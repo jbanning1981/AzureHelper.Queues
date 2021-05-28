@@ -12,5 +12,6 @@ namespace AzureClient.Core.Interfaces
         Task<bool> DoesMessageExistAsync(string queueName, string messageContent);
         Task<bool> DoesMessageExistAsync(string queueName, object itemToCheck);
         Task<bool> DoesMessageIdExistAsync(string queueName, string messageId);
+        Task<IQueueMessage<T>> GetNextMessageAsync<T>(string queueName);
     }
 }
