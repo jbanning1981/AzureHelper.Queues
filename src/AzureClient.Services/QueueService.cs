@@ -88,17 +88,11 @@ namespace AzureClient.Services
             return client;
         }
 
-        private CancellationToken GetCancellationToken()
-        {
-            var tokenSource = new CancellationTokenSource(_queueConfiguration.CancellationTimeoutInMs);
-            return tokenSource.Token;
-        }
-
         public async Task<IQueueMessage> AddMessageAsync(string queueName, string message)
         {
             var client = await GetQueueClient(queueName);
 
-            var receipt = await client.SendMessageAsync(message, GetCancellationToken());
+            var receipt = await client.SendMessageAsync(message);
 
             return new QueueMessage()
             {
@@ -116,7 +110,7 @@ namespace AzureClient.Services
 
             var msg = _serializer.Serialize(itemToSend);
 
-            var receipt = await client.SendMessageAsync(msg, GetCancellationToken());
+            var receipt = await client.SendMessageAsync(msg);
 
             return new QueueMessage()
             {
@@ -161,7 +155,7 @@ namespace AzureClient.Services
 
             var client = await GetQueueClient(queueName);
 
-            var result = await client.DeleteMessageAsync(messageId, receiptId, GetCancellationToken());
+            var result = await client.DeleteMessageAsync(messageId, receiptId);
 
             return result?.Status == (int)HttpStatusCode.NoContent;
 
@@ -200,7 +194,7 @@ namespace AzureClient.Services
             return queueMessage;
         }
 
-        public async Task<IQueueMessage<T>> GetMessageAsync<T>(string queueName, string messageId)
+        public async Task<bool> UpdateMessageAsync<T>(string queueName, string messageId, string updatedContents)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
@@ -212,23 +206,14 @@ namespace AzureClient.Services
             {
                 if(msg.MessageId == messageId)
                 {
-                    var queueMessage = new QueueMessage<T>
-                    {
-                        Id = msg.MessageId,
-                        Receipt = msg.PopReceipt,
-                        Data = _serializer.Deserialize<T>(msg.Body.ToString())
-                    };
-
-                    await client.DeleteMessageAsync(msg.MessageId, msg.PopReceipt);
-
-                    return queueMessage;
+                    await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, updatedContents);
+                    return true;
                 }
 
                 await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
             }
 
-            return null;
-
+            return false;
         }
 
     }
