@@ -54,6 +54,15 @@ namespace AzureClient.Tests
         }
 
         [Fact]
+        public void ValidateConfiguration_ThrowsOnMissingSerializer()
+        {
+            var ex = Assert.Throws<ArgumentException>(() => new QueueService(new QueueConfiguration() { ConnectionString = "somestring", MessageSerializer = Core.QueueMessageSerializer.External }));
+            var invalidParamName = (ex as ArgumentException).ParamName;
+
+            Assert.Equal(nameof(QueueConfiguration.MessageSerializer), invalidParamName);
+        }
+
+        [Fact]
         public async Task AddMessageAsync_WithStringMessageContents_Success()
         {
             var messageContents = "This is a test";
@@ -75,7 +84,7 @@ namespace AzureClient.Tests
         [Fact]
         public async Task AddMessageAsync_WithObjectMessageContents_Success()
         {
-            var messageObject = new { Message = "This is a test" };
+            var messageObject = new QueueTestMessage() { Message = "This is a test" };
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
             Assert.NotNull(message);
