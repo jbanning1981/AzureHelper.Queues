@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AzureClient.Services.Serializers
 {
-    internal class SystemTextJsonSerializer : ISerializer
+    public class SystemTextJsonSerializer : ISerializer
     {
         private JsonSerializerOptions settings;
 

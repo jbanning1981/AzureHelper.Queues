@@ -2,6 +2,7 @@
 using AzureClient.Core.Interfaces;
 using AzureClient.Core.Models;
 using AzureClient.Services;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,15 +10,17 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace AzureClient.Tests
+namespace AzureClient.Tests.Integration
 {
-    [Trait("Category", nameof(BaseQueueServiceTest))]
-    public abstract class BaseQueueServiceTest
+    
+    public abstract class BaseQueueServiceIntegrationTest
     {
         protected IQueueConfiguration _queueConfig;
         protected IQueueService _queueService;
         protected string _queueName;
         protected QueueServiceClient _queueClient;
+        protected ISerializer _serializeTestValidator;
+
 
         protected QueueServiceClient GetQueueClient()
         {
@@ -56,7 +59,7 @@ namespace AzureClient.Tests
         [Fact]
         public async Task AddMessageAsync_WithStringMessageContents_Success()
         {
-            var messageContents = "This is a test";
+            var messageContents = CreateMessageText();
             var message = await _queueService.AddMessageAsync(_queueName, messageContents);
 
             Assert.NotNull(message);
@@ -75,7 +78,7 @@ namespace AzureClient.Tests
         [Fact]
         public async Task AddMessageAsync_WithObjectMessageContents_Success()
         {
-            var messageObject = new { Message = "This is a test" };
+            var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
             Assert.NotNull(message);
@@ -92,12 +95,11 @@ namespace AzureClient.Tests
             await azureClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
 
         }
-
 
         [Fact]
         public async Task GetMessageAsync_WithObjectMessageContents_Success()
         {
-            var messageObject = new QueueTestMessage { Message = "This is a test" };
+            var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
             Assert.NotNull(message);
@@ -105,17 +107,70 @@ namespace AzureClient.Tests
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
 
-            var azureClient = _queueClient.GetQueueClient(_queueName);
-            var msg = await azureClient.ReceiveMessagesAsync(maxMessages: 1);
+            var msg = await _queueService.GetNextMessageAsync(_queueName);
 
-            var expectedMatch = msg.Value.First();
+            Assert.Equal(_serializeTestValidator.Serialize(messageObject), msg.Body);
 
-            Assert.Equal(message.Id, expectedMatch.MessageId);
-            await azureClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
-            
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, msg.Id));
+        }
+
+        [Fact]
+        public async Task GetMessageAsync_WithStringMessageContents_Success()
+        {
+            var messageText = CreateMessageText();
+            var message = await _queueService.AddMessageAsync(_queueName, messageText);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            var msg = await _queueService.GetNextMessageAsync(_queueName);
+
+            Assert.Equal(messageText, msg.Body);
+
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, messageText));
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, msg.Id));
+        }
+
+        [Fact]
+        public async Task DeleteMessageAsync_Success()
+        {
+            var messageObject = CreateTestMessageObject();
+            var message = await _queueService.AddMessageAsync(_queueName, messageObject);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, _serializeTestValidator.Serialize(messageObject)));
+
+            var msg = await _queueService.GetNextMessageAsync(_queueName);
+
+            Assert.Equal(_serializeTestValidator.Serialize(messageObject), msg.Body);
+
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, msg.Id));
         }
 
 
+
+        private QueueTestMessage CreateTestMessageObject()
+        {
+            return new QueueTestMessage()
+            {
+                Message = CreateMessageText()
+            };
+        }
+
+        private string CreateMessageText()
+        {
+            return $"{Guid.NewGuid()}-{DateTime.UtcNow.Ticks}";
+        }
 
 
         protected class QueueTestMessage

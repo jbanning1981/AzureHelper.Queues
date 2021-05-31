@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace AzureClient.Services.Serializers
 {
-    internal class NewtonsoftSerializer : ISerializer
+    public class NewtonsoftSerializer : ISerializer
     {
         private JsonSerializerSettings settings;
         public NewtonsoftSerializer(JsonSerializerSettings settings = null)

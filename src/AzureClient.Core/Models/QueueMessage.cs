@@ -7,6 +7,12 @@ using System.Threading.Tasks;
 
 namespace AzureClient.Core.Models
 {
+    public class QueueReceipt : IQueueMessageReceipt
+    {
+        public string Id { get; set; }
+        public string Receipt { get; set; }
+    }
+
     public class QueueMessage : IQueueMessage
     {
         public string Id { get; set; }
@@ -18,6 +24,6 @@ namespace AzureClient.Core.Models
     {
         public string Id { get; set; }
         public string Receipt { get; set; }
-        public T Data { get; set; }
+        public T Body { get; set; }
     }
 }

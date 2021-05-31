@@ -72,9 +72,9 @@ namespace AzureClient.Services
         }
 
 
-        private async Task<QueueClient> GetQueueClient(string queueName)
+        public async Task<QueueClient> GetQueueClientAsync(string queueName)
         {
-
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             var client = _queueClient.GetQueueClient(queueName);
 
             if (!(await client.ExistsAsync()) && !_queueConfiguration.AutomaticallyCreateQueues)
@@ -88,9 +88,25 @@ namespace AzureClient.Services
             return client;
         }
 
-        public async Task<IQueueMessage> AddMessageAsync(string queueName, string message)
+        public QueueClient GetQueueClient(string queueName)
         {
-            var client = await GetQueueClient(queueName);
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            var client = _queueClient.GetQueueClient(queueName);
+
+            if (! client.Exists() && !_queueConfiguration.AutomaticallyCreateQueues)
+            {
+                var errMsg = $"The specified queue {queueName} does not exist, and the service is not configured to create missing queues. Enable {nameof(_queueConfiguration.AutomaticallyCreateQueues)} if you would like the service to create missing queues.";
+                throw new InvalidOperationException(errMsg);
+            }
+
+            client.CreateIfNotExists();
+
+            return client;
+        }
+
+        public async Task<IQueueMessageReceipt> AddMessageAsync(string queueName, string message)
+        {
+            var client = await GetQueueClientAsync(queueName);
 
             var receipt = await client.SendMessageAsync(message);
 
@@ -101,12 +117,12 @@ namespace AzureClient.Services
             };
         }
 
-        public async Task<IQueueMessage> AddMessageAsync<T>(string queueName, T itemToSend)
+        public async Task<IQueueMessageReceipt> AddMessageAsync<T>(string queueName, T itemToSend)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             Guard.Against.Null(itemToSend, nameof(itemToSend));
 
-            var client = await GetQueueClient(queueName);
+            var client = await GetQueueClientAsync(queueName);
 
             var msg = _serializer.Serialize(itemToSend);
 
@@ -133,7 +149,7 @@ namespace AzureClient.Services
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
-            var client = await GetQueueClient(queueName);
+            var client = await GetQueueClientAsync(queueName);
 
             var messages = await client.PeekMessagesAsync();
 
@@ -153,7 +169,7 @@ namespace AzureClient.Services
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
-            var client = await GetQueueClient(queueName);
+            var client = await GetQueueClientAsync(queueName);
 
             var result = await client.DeleteMessageAsync(messageId, receiptId);
 
@@ -165,7 +181,7 @@ namespace AzureClient.Services
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
-            var client = await GetQueueClient(queueName);
+            var client = await GetQueueClientAsync(queueName);
 
             var messages = await client.PeekMessagesAsync();
 
@@ -178,7 +194,7 @@ namespace AzureClient.Services
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
 
-            var client = await GetQueueClient(queueName);
+            var client = await GetQueueClientAsync(queueName);
 
             var msg = await client.ReceiveMessageAsync();
 
@@ -186,7 +202,7 @@ namespace AzureClient.Services
             {
                 Id = msg.Value.MessageId,
                 Receipt = msg.Value.PopReceipt,
-                Data = _serializer.Deserialize<T>(msg.Value.Body.ToString())
+                Body = _serializer.Deserialize<T>(msg.Value.Body.ToString())
             };
 
             await client.DeleteMessageAsync(msg.Value.MessageId, msg.Value.PopReceipt);
@@ -194,27 +210,117 @@ namespace AzureClient.Services
             return queueMessage;
         }
 
-        public async Task<bool> UpdateMessageAsync<T>(string queueName, string messageId, string updatedContents)
+        public async Task<IQueueMessage> GetNextMessageAsync(string queueName)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
 
-            var client = await GetQueueClient(queueName);
 
+            var client = await GetQueueClientAsync(queueName);
+
+            var msg = await client.ReceiveMessageAsync();
+
+            var queueMessage = new QueueMessage
+            {
+                Id = msg.Value.MessageId,
+                Receipt = msg.Value.PopReceipt,
+                Body = msg.Value.Body.ToString()
+            };
+
+            await client.DeleteMessageAsync(msg.Value.MessageId, msg.Value.PopReceipt);
+
+            return queueMessage;
+        }
+
+        public bool TryUpdateMessage(string queueName, string messageId, string updatedContents, out IQueueMessageReceipt updatedReceipt)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            updatedReceipt = null;
+            var client = GetQueueClient(queueName);
+
+            return TryFindAndUpdateMessage(client, messageId, updatedContents, ref updatedReceipt);
+        }
+
+        public bool TryUpdateMessage<T>(string queueName, string messageId, T updatedContents, out IQueueMessageReceipt updatedReceipt)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            updatedReceipt = null;
+            var client = GetQueueClient(queueName);
+            var updatedBody = _serializer.Serialize(updatedContents);
+            return TryFindAndUpdateMessage(client, messageId, updatedBody, ref updatedReceipt);
+        }
+
+        private static bool TryFindAndUpdateMessage(QueueClient client, string messageId, string updatedBody, ref IQueueMessageReceipt updatedReceipt)
+        {
+            var messages = client.ReceiveMessages();
+
+            foreach (var msg in messages.Value)
+            {
+                if (msg.MessageId == messageId)
+                {
+                    var updatedMessage = client.UpdateMessage(msg.MessageId, msg.PopReceipt, updatedBody);
+                    updatedReceipt = new QueueMessage()
+                    {
+                        Id = msg.MessageId,
+                        Receipt = msg.PopReceipt
+                    };
+
+                    return true;
+                }
+
+                client.UpdateMessage(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
+            }
+
+            return false;
+        }
+
+        public async Task<IQueueMessageReceipt> UpdateMessageAsync(string queueName, string messageId, string updatedContents)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
+            Guard.Against.NullOrWhiteSpace(updatedContents, nameof(updatedContents));
+
+            var client = await GetQueueClientAsync(queueName);
+
+            return await FindAndUpdateMessageAsync(client, messageId, updatedContents);
+        }
+
+
+        public async Task<IQueueMessageReceipt> UpdateMessageAsync<T>(string queueName, string messageId, T updatedContents)
+        {
+            Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
+            Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
+            Guard.Against.Null(updatedContents, nameof(updatedContents));
+
+            var client = await GetQueueClientAsync(queueName);
+
+            var updatedMessageBody = _serializer.Serialize(updatedContents);
+
+            return await FindAndUpdateMessageAsync(client, messageId, updatedMessageBody);
+        }
+
+        private static async Task<IQueueMessageReceipt> FindAndUpdateMessageAsync(QueueClient client, string messageId, string updatedContents)
+        {
             var messages = await client.ReceiveMessagesAsync();
 
-            foreach(var msg in messages.Value)
+            foreach (var msg in messages.Value)
             {
-                if(msg.MessageId == messageId)
+                if (msg.MessageId == messageId)
                 {
-                    await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, updatedContents);
-                    return true;
+                    var updatedMessage = await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, updatedContents);
+                    return new QueueMessage()
+                    {
+                        Id = msg.MessageId,
+                        Receipt = updatedMessage.Value.PopReceipt
+                    };
                 }
 
                 await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
             }
 
-            return false;
+            return null;
         }
+
+
 
     }
 }
