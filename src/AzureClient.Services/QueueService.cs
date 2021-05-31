@@ -37,7 +37,7 @@ namespace AzureClient.Services
 
             if(queueConfiguration.MessageSerializer == QueueMessageSerializer.External && serializer == null)
             {
-                throw new ArgumentException(nameof(serializer), $"{nameof(IQueueConfiguration.MessageSerializer)} is set to {QueueMessageSerializer.External}, but no serializer was provided.");
+                throw new ArgumentException($"{nameof(IQueueConfiguration.MessageSerializer)} is set to {QueueMessageSerializer.External}, but no serializer was provided.", nameof(IQueueConfiguration.MessageSerializer));
             }
 
             if (queueConfiguration.MessageSerializer == QueueMessageSerializer.Newtonsoft && queueConfiguration.OptionalSerializeSettings != null && queueConfiguration.OptionalSerializeSettings.GetType() != typeof(Newtonsoft.Json.JsonSerializerSettings))
