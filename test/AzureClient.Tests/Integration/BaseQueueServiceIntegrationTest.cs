@@ -68,6 +68,8 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public async Task AddMessageAsync_WithStringMessageContents_Success()
         {
+            await DeleteAllMessagesAsync();
+
             var messageContents = CreateMessageText();
             var message = await _queueService.AddMessageAsync(_queueName, messageContents);
 
@@ -87,6 +89,8 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public async Task AddMessageAsync_WithObjectMessageContents_Success()
         {
+            await DeleteAllMessagesAsync();
+
             var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
@@ -108,6 +112,8 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public async Task GetMessageAsync_WithObjectMessageContents_Success()
         {
+            await DeleteAllMessagesAsync();
+
             var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
@@ -116,10 +122,9 @@ namespace AzureClient.Tests.Integration
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
 
-            var msg = await _queueService.GetNextMessageAsync(_queueName);
+            var msg = await _queueService.GetNextMessageAsync<QueueTestMessage>(_queueName);
 
-            Assert.Equal(_serializeTestValidator.Serialize(messageObject), msg.Body);
-
+            Assert.Equal(messageObject.Message, msg.Body.Message);
             Assert.False(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
             Assert.False(await _queueService.DoesMessageExistAsync(_queueName, msg.Id));
         }
@@ -127,6 +132,8 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public async Task GetMessageAsync_WithStringMessageContents_Success()
         {
+            await DeleteAllMessagesAsync();
+
             var messageText = CreateMessageText();
             var message = await _queueService.AddMessageAsync(_queueName, messageText);
 
@@ -146,6 +153,8 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public async Task DeleteMessageAsync_Success()
         {
+            await DeleteAllMessagesAsync();
+
             var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
 
@@ -158,15 +167,32 @@ namespace AzureClient.Tests.Integration
             Assert.True(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
             Assert.True(await _queueService.DoesMessageExistAsync(_queueName, _serializeTestValidator.Serialize(messageObject)));
 
-            var msg = await _queueService.GetNextMessageAsync(_queueName);
+            var removeResult = await _queueService.RemoveMessageAsync(_queueName, message.Id, message.Receipt);
 
-            Assert.Equal(_serializeTestValidator.Serialize(messageObject), msg.Body);
+            Assert.True(removeResult);
 
             Assert.False(await _queueService.DoesMessageExistAsync(_queueName, messageObject));
-            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, msg.Id));
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, _serializeTestValidator.Serialize(messageObject)));
         }
 
+        [Fact]
+        public async Task DeleteMessageAsync_NoMatching_MessageId_Success()
+        {
+            await DeleteAllMessagesAsync();
 
+            var removeResult = await _queueService.RemoveMessageAsync(_queueName, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+
+            Assert.False(removeResult);
+        }
+
+        private async Task DeleteAllMessagesAsync()
+        {
+            var client = GetQueueClient();
+            var queueClient = client.GetQueueClient(_queueName);
+
+            await queueClient.ClearMessagesAsync();
+
+        }
 
         private QueueTestMessage CreateTestMessageObject()
         {

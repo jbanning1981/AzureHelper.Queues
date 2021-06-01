@@ -15,10 +15,10 @@ namespace AzureClient.Core.Interfaces
         Task<bool> DoesMessageIdExistAsync(string queueName, string messageId);
         Task<IQueueMessage<T>> GetNextMessageAsync<T>(string queueName);
         Task<IQueueMessage> GetNextMessageAsync(string queueName);
-        bool TryUpdateMessage(string queueName, string messageId, string updatedContents, out IQueueMessageReceipt updatedReceipt);
-        bool TryUpdateMessage<T>(string queueName, string messageId, T updatedContents, out IQueueMessageReceipt updatedReceipt);
-        Task<IQueueMessageReceipt> UpdateMessageAsync(string queueName, string messageId, string updatedContents);
-        Task<IQueueMessageReceipt> UpdateMessageAsync<T>(string queueName, string messageId, T updatedContents);
+        IOperationResult UpdateMessage(string queueName, string messageId, string updatedContents);
+        IOperationResult UpdateMessage<T>(string queueName, string messageId, T updatedContents);
+        Task<IOperationResult> UpdateMessageAsync(string queueName, string messageId, string updatedContents);
+        Task<IOperationResult> UpdateMessageAsync<T>(string queueName, string messageId, T updatedContents);
         Task<QueueClient> GetQueueClientAsync(string queueName);
         QueueClient GetQueueClient(string queueName);
     }

@@ -171,9 +171,21 @@ namespace AzureClient.Services
 
             var client = await GetQueueClientAsync(queueName);
 
-            var result = await client.DeleteMessageAsync(messageId, receiptId);
+            var messages = client.ReceiveMessages();
 
-            return result?.Status == (int)HttpStatusCode.NoContent;
+            foreach (var msg in messages.Value)
+            {
+                if (msg.MessageId == messageId)
+                {
+                    var result = await client.DeleteMessageAsync(msg.MessageId, msg.PopReceipt);
+
+                    return result?.Status == (int)HttpStatusCode.NoContent;
+                }
+
+                client.UpdateMessage(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
+            }
+
+            return false;
 
         }
 
@@ -231,25 +243,27 @@ namespace AzureClient.Services
             return queueMessage;
         }
 
-        public bool TryUpdateMessage(string queueName, string messageId, string updatedContents, out IQueueMessageReceipt updatedReceipt)
+        public IOperationResult UpdateMessage(string queueName, string messageId, string updatedContents)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
-            updatedReceipt = null;
+            Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
+
             var client = GetQueueClient(queueName);
 
-            return TryFindAndUpdateMessage(client, messageId, updatedContents, ref updatedReceipt);
+            return FindAndUpdateMessage(client, messageId, updatedContents);
         }
 
-        public bool TryUpdateMessage<T>(string queueName, string messageId, T updatedContents, out IQueueMessageReceipt updatedReceipt)
+        public IOperationResult UpdateMessage<T>(string queueName, string messageId, T updatedContents)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
-            updatedReceipt = null;
+            Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
+            
             var client = GetQueueClient(queueName);
             var updatedBody = _serializer.Serialize(updatedContents);
-            return TryFindAndUpdateMessage(client, messageId, updatedBody, ref updatedReceipt);
+            return FindAndUpdateMessage(client, messageId, updatedBody);
         }
 
-        private static bool TryFindAndUpdateMessage(QueueClient client, string messageId, string updatedBody, ref IQueueMessageReceipt updatedReceipt)
+        private static IOperationResult FindAndUpdateMessage(QueueClient client, string messageId, string updatedBody)
         {
             var messages = client.ReceiveMessages();
 
@@ -258,22 +272,34 @@ namespace AzureClient.Services
                 if (msg.MessageId == messageId)
                 {
                     var updatedMessage = client.UpdateMessage(msg.MessageId, msg.PopReceipt, updatedBody);
-                    updatedReceipt = new QueueMessage()
-                    {
-                        Id = msg.MessageId,
-                        Receipt = msg.PopReceipt
-                    };
 
-                    return true;
+                    return new OperationResult
+                    {
+                        IsSuccessful = true,
+                        Receipt = new QueueReceipt()
+                        {
+                            Id = msg.MessageId,
+                            Receipt = updatedMessage.Value.PopReceipt
+                        }
+                    };
                 }
 
                 client.UpdateMessage(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
             }
-
-            return false;
+            return CreateNoMatchingResult();
         }
 
-        public async Task<IQueueMessageReceipt> UpdateMessageAsync(string queueName, string messageId, string updatedContents)
+        private static IOperationResult CreateNoMatchingResult()
+        {
+            return new OperationResult
+            {
+                IsSuccessful = false,
+                Details = "No message matched the specified id and receipt.",
+                Receipt = null
+            };
+        }
+
+        public async Task<IOperationResult> UpdateMessageAsync(string queueName, string messageId, string updatedContents)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
@@ -285,7 +311,7 @@ namespace AzureClient.Services
         }
 
 
-        public async Task<IQueueMessageReceipt> UpdateMessageAsync<T>(string queueName, string messageId, T updatedContents)
+        public async Task<IOperationResult> UpdateMessageAsync<T>(string queueName, string messageId, T updatedContents)
         {
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             Guard.Against.NullOrWhiteSpace(messageId, nameof(messageId));
@@ -298,7 +324,7 @@ namespace AzureClient.Services
             return await FindAndUpdateMessageAsync(client, messageId, updatedMessageBody);
         }
 
-        private static async Task<IQueueMessageReceipt> FindAndUpdateMessageAsync(QueueClient client, string messageId, string updatedContents)
+        private static async Task<IOperationResult> FindAndUpdateMessageAsync(QueueClient client, string messageId, string updatedContents)
         {
             var messages = await client.ReceiveMessagesAsync();
 
@@ -307,17 +333,21 @@ namespace AzureClient.Services
                 if (msg.MessageId == messageId)
                 {
                     var updatedMessage = await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, updatedContents);
-                    return new QueueMessage()
+                    return new OperationResult
                     {
-                        Id = msg.MessageId,
-                        Receipt = updatedMessage.Value.PopReceipt
+                        IsSuccessful = true,
+                        Receipt = new QueueReceipt()
+                        {
+                            Id = msg.MessageId,
+                            Receipt = updatedMessage.Value.PopReceipt
+                        }
                     };
                 }
 
                 await client.UpdateMessageAsync(msg.MessageId, msg.PopReceipt, msg.Body, visibilityTimeout: TimeSpan.Zero);
             }
 
-            return null;
+            return CreateNoMatchingResult();
         }
 
 
