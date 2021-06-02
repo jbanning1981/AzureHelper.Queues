@@ -18,7 +18,7 @@ namespace AzureClient.Tests.Integration
             _queueConfig = GetConfiguration();
             _queueService = new QueueService(_queueConfig);
             _queueName = "newtonsoft-test-queue";
-            _queueClient = GetQueueClient();
+            _queueClient = GetQueueServiceClient();
             _serializeTestValidator = new NewtonsoftSerializer(_queueConfig.OptionalSerializeSettings as Newtonsoft.Json.JsonSerializerSettings);
         }
 

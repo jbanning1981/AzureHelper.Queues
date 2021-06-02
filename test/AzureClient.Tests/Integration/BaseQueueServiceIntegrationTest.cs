@@ -22,9 +22,14 @@ namespace AzureClient.Tests.Integration
         protected ISerializer _serializeTestValidator;
 
 
-        protected QueueServiceClient GetQueueClient()
+        protected QueueServiceClient GetQueueServiceClient()
         {
             return new QueueServiceClient(_queueConfig.ConnectionString, new QueueClientOptions() { MessageEncoding = _queueConfig.DefaultMessageEncoding });
+        }
+
+        protected QueueClient GetQueueClient()
+        {
+            return GetQueueServiceClient().GetQueueClient(_queueName);
         }
 
         public virtual IQueueConfiguration GetConfiguration(Core.QueueMessageSerializer serializer = Core.QueueMessageSerializer.Newtonsoft)
@@ -157,7 +162,6 @@ namespace AzureClient.Tests.Integration
 
             var messageObject = CreateTestMessageObject();
             var message = await _queueService.AddMessageAsync(_queueName, messageObject);
-
             Assert.NotNull(message);
             Assert.False(string.IsNullOrWhiteSpace(message.Id));
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
@@ -185,13 +189,136 @@ namespace AzureClient.Tests.Integration
             Assert.False(removeResult);
         }
 
+        [Fact]
+        public async Task UpdateMessage_WithStringContents_Success()
+        {
+            await DeleteAllMessagesAsync();
+
+            var originalMessage = CreateMessageText();
+            var message = await _queueService.AddMessageAsync(_queueName, originalMessage);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+
+            var updatedMessage = CreateMessageText();
+            var updateResult = _queueService.UpdateMessage(_queueName, message.Id, updatedMessage);
+
+            Assert.True(updateResult.IsSuccessful);
+            Assert.NotEqual(message.Receipt, updateResult.Receipt.Receipt);
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, updatedMessage));            
+        }     
+
+        [Fact]
+        public async Task UpdateMessage_WithObjectContents_Success()
+        {
+            await DeleteAllMessagesAsync();
+
+            var originalMessage = CreateTestMessageObject();
+            var message = await _queueService.AddMessageAsync(_queueName, originalMessage);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+
+            var updatedMessage = CreateMessageText();
+            var updateResult = _queueService.UpdateMessage(_queueName, message.Id, updatedMessage);
+
+            Assert.True(updateResult.IsSuccessful);
+            Assert.NotEqual(message.Receipt, updateResult.Receipt.Receipt);
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, updatedMessage));            
+        } 
+
+        public async Task UpdateMessageAsync_WithStringContents_Success()
+        {
+            await DeleteAllMessagesAsync();
+
+            var originalMessage = CreateMessageText();
+            var message = await _queueService.AddMessageAsync(_queueName, originalMessage);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+
+            var updatedMessage = CreateMessageText();
+            var updateResult = await _queueService.UpdateMessageAsync(_queueName, message.Id, updatedMessage);
+
+            Assert.True(updateResult.IsSuccessful);
+            Assert.NotEqual(message.Receipt, updateResult.Receipt.Receipt);
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, updatedMessage));            
+        }     
+
+        [Fact]
+        public async Task UpdateMessageAsync_WithObjectContents_Success()
+        {
+            await DeleteAllMessagesAsync();
+
+            var originalMessage = CreateTestMessageObject();
+            var message = await _queueService.AddMessageAsync(_queueName, originalMessage);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+
+            var updatedMessage = CreateMessageText();
+            var updateResult = await _queueService.UpdateMessageAsync(_queueName, message.Id, updatedMessage);
+
+            Assert.True(updateResult.IsSuccessful);
+            Assert.NotEqual(message.Receipt, updateResult.Receipt.Receipt);
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, updatedMessage));            
+        }         
+
+        [Fact]
+        public async Task UpdateMessageAsync_Test_Success()
+        {
+            await DeleteAllMessagesAsync();
+
+            var originalMessage = CreateMessageText();
+            var message = await _queueService.AddMessageAsync(_queueName, originalMessage);
+
+            Assert.NotNull(message);
+            Assert.False(string.IsNullOrWhiteSpace(message.Id));
+            Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
+
+
+            Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+
+            var updatedMessage = CreateMessageText();
+            var updateResult = _queueService.UpdateMessage(_queueName, message.Id, updatedMessage);
+
+            Assert.True(updateResult.IsSuccessful);
+            Assert.NotEqual(message.Receipt, updateResult.Receipt.Receipt);
+            Assert.False(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
+            Assert.True(await _queueService.DoesMessageExistAsync(_queueName, updatedMessage));            
+        }         
+
+
+
         private async Task DeleteAllMessagesAsync()
         {
-            var client = GetQueueClient();
-            var queueClient = client.GetQueueClient(_queueName);
-
+            var queueClient = GetQueueClient();
             await queueClient.ClearMessagesAsync();
-
         }
 
         private QueueTestMessage CreateTestMessageObject()
