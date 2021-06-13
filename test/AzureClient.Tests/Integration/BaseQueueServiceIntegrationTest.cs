@@ -230,7 +230,7 @@ namespace AzureClient.Tests.Integration
             Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
             Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
 
-            var updatedMessage = CreateMessageText();
+            var updatedMessage = CreateTestMessageObject();
             var updateResult = _queueService.UpdateMessage(_queueName, message.Id, updatedMessage);
 
             Assert.True(updateResult.IsSuccessful);
@@ -279,7 +279,7 @@ namespace AzureClient.Tests.Integration
             Assert.True(await _queueService.DoesMessageIdExistAsync(_queueName, message.Id));
             Assert.True(await _queueService.DoesMessageExistAsync(_queueName, originalMessage));
 
-            var updatedMessage = CreateMessageText();
+            var updatedMessage = CreateTestMessageObject();
             var updateResult = await _queueService.UpdateMessageAsync(_queueName, message.Id, updatedMessage);
 
             Assert.True(updateResult.IsSuccessful);

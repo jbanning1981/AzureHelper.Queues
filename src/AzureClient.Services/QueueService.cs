@@ -325,7 +325,7 @@ namespace AzureClient.Services
             return new OperationResult
             {
                 IsSuccessful = false,
-                Details = "No message matched the specified id and receipt.",
+                Details = "No message matched the specified id.",
                 Receipt = null
             };
         }
