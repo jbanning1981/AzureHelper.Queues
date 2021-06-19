@@ -93,7 +93,7 @@ namespace AzureClient.Services
             Guard.Against.NullOrWhiteSpace(queueName, nameof(queueName));
             var client = _queueClient.GetQueueClient(queueName);
 
-            if (! client.Exists() && !_queueConfiguration.AutomaticallyCreateQueues)
+            if (!client.Exists() && !_queueConfiguration.AutomaticallyCreateQueues)
             {
                 var errMsg = $"The specified queue {queueName} does not exist, and the service is not configured to create missing queues. Enable {nameof(_queueConfiguration.AutomaticallyCreateQueues)} if you would like the service to create missing queues.";
                 throw new InvalidOperationException(errMsg);
