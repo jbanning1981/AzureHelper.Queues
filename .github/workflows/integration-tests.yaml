@@ -20,14 +20,14 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
+    - name: Pull Docker Image
+      run: docker pull mcr.microsoft.com/azure-storage/azurite
     - name: Run Azurite Docker Image
       run: docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
     - name: Test
       run: dotnet test --no-build --verbosity normal
   
