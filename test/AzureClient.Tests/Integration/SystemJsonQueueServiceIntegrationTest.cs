@@ -17,7 +17,7 @@ namespace AzureClient.Tests.Integration
             _queueConfig = GetConfiguration(Core.QueueMessageSerializer.SystemTextJson);
             _queueService = new QueueService(_queueConfig);
             _queueName = "system-json-test-queue";
-            _queueClient = GetQueueServiceClient();
+            _queueServiceClient = GetQueueServiceClient();
             _serializeTestValidator = new SystemTextJsonSerializer(_queueConfig.OptionalSerializeSettings as JsonSerializerOptions);
         }
 

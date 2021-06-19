@@ -18,7 +18,7 @@ namespace AzureClient.Tests.Integration
         protected IQueueConfiguration _queueConfig;
         protected IQueueService _queueService;
         protected string _queueName;
-        protected QueueServiceClient _queueClient;
+        protected QueueServiceClient _queueServiceClient;
         protected ISerializer _serializeTestValidator;
 
 
@@ -29,7 +29,7 @@ namespace AzureClient.Tests.Integration
 
         protected QueueClient GetQueueClient()
         {
-            return GetQueueServiceClient().GetQueueClient(_queueName);
+            return _queueService.GetQueueClient(_queueName);
         }
 
         public virtual IQueueConfiguration GetConfiguration(Core.QueueMessageSerializer serializer = Core.QueueMessageSerializer.Newtonsoft)
@@ -82,7 +82,7 @@ namespace AzureClient.Tests.Integration
             Assert.False(string.IsNullOrWhiteSpace(message.Id));
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
-            var azureClient = _queueClient.GetQueueClient(_queueName);
+            var azureClient = _queueServiceClient.GetQueueClient(_queueName);
             var msg = await azureClient.ReceiveMessagesAsync(maxMessages: 1);
 
             var expectedMatch = msg.Value.First();
@@ -104,7 +104,7 @@ namespace AzureClient.Tests.Integration
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
 
-            var azureClient = _queueClient.GetQueueClient(_queueName);
+            var azureClient = _queueServiceClient.GetQueueClient(_queueName);
             var msg = await azureClient.ReceiveMessagesAsync(maxMessages: 1);
 
             var expectedMatch = msg.Value.First();
