@@ -20,15 +20,6 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
-#    - name: Pull Docker Image
-#      run: docker pull mcr.microsoft.com/azure-storage/azurite
-#    - name: Run Azurite Docker Image
-#      run: docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
-#    - name: Install and run Azurite (NPM)
-#    - run: |
-#        sudo npm install -g azurite
-#        sudo mkdir azurite
-#        sudo azurite --silent --location azurite 
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
