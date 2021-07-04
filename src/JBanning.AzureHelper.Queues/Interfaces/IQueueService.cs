@@ -1,9 +1,9 @@
 using Azure.Storage.Queues;
-using AzureClient.Core.Interfaces;
+using JBanning.AzureHelper.Queues.Interfaces;
 using System;
 using System.Threading.Tasks;
 
-namespace AzureClient.Core.Interfaces
+namespace JBanning.AzureHelper.Queues.Interfaces
 {
     public interface IQueueService
     {

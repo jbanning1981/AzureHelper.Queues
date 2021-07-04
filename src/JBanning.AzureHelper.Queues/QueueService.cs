@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Azure.Storage.Queues;
-using AzureClient.Core;
-using AzureClient.Core.Interfaces;
-using AzureClient.Core.Models;
-using AzureClient.Services.Serializers;
+using JBanning.AzureHelper.Queues.Interfaces;
+using JBanning.AzureHelper.Queues.Models;
+using JBanning.AzureHelper.Queues.Serializers;
 
-namespace AzureClient.Services
+namespace JBanning.AzureHelper.Queues.Services
 {
     public class QueueService : IQueueService
     {

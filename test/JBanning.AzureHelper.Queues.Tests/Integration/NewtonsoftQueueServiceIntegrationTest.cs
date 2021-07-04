@@ -1,12 +1,12 @@
-using AzureClient.Core.Interfaces;
-using AzureClient.Core.Models;
-using AzureClient.Services;
-using AzureClient.Services.Serializers;
+using JBanning.AzureHelper.Queues.Interfaces;
+using JBanning.AzureHelper.Queues.Models;
+using JBanning.AzureHelper.Queues.Services;
+using JBanning.AzureHelper.Queues.Serializers;
 using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace AzureClient.Tests.Integration
+namespace JBanning.AzureHelper.Queues.Tests.Integration
 {
     [Trait("Category", "Integration_Newtonsoft")]
     public class NewtonsoftQueueServiceIntegrationTest : BaseQueueServiceIntegrationTest

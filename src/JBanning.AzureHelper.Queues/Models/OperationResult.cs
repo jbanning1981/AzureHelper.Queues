@@ -1,6 +1,6 @@
-using AzureClient.Core.Interfaces;
+using JBanning.AzureHelper.Queues.Interfaces;
 
-namespace AzureClient.Core.Models
+namespace JBanning.AzureHelper.Queues.Models
 {
     public class OperationResult : IOperationResult
     {
