@@ -1,18 +1,15 @@
 ﻿using Azure.Storage.Queues;
-using AzureClient.Core.Interfaces;
-using AzureClient.Core.Models;
-using AzureClient.Services;
-using Newtonsoft.Json;
+using JBanning.AzureHelper.Queues.Interfaces;
+using JBanning.AzureHelper.Queues.Models;
+using JBanning.AzureHelper.Queues.Services;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace AzureClient.Tests.Integration
+namespace JBanning.AzureHelper.Queues.Tests.Integration
 {
-    
+
     public abstract class BaseQueueServiceIntegrationTest
     {
         protected IQueueConfiguration _queueConfig;
@@ -32,7 +29,7 @@ namespace AzureClient.Tests.Integration
             return _queueService.GetQueueClient(_queueName);
         }
 
-        public virtual IQueueConfiguration GetConfiguration(Core.QueueMessageSerializer serializer = Core.QueueMessageSerializer.Newtonsoft)
+        public virtual IQueueConfiguration GetConfiguration(QueueMessageSerializer serializer = QueueMessageSerializer.Newtonsoft)
         {
             return new QueueConfiguration() { AutomaticallyCreateQueues = true, ConnectionString = "UseDevelopmentStorage=true;", CancellationTimeoutInMs = 30000, MessageSerializer = serializer, DefaultMessageEncoding = Azure.Storage.Queues.QueueMessageEncoding.Base64 };
         }
@@ -64,7 +61,7 @@ namespace AzureClient.Tests.Integration
         [Fact]
         public void ValidateConfiguration_ThrowsOnMissingSerializer()
         {
-            var ex = Assert.Throws<ArgumentException>(() => new QueueService(new QueueConfiguration() { ConnectionString = "somestring", MessageSerializer = Core.QueueMessageSerializer.External }));
+            var ex = Assert.Throws<ArgumentException>(() => new QueueService(new QueueConfiguration() { ConnectionString = "somestring", MessageSerializer = QueueMessageSerializer.External }));
             var invalidParamName = (ex as ArgumentException).ParamName;
 
             Assert.Equal(nameof(QueueConfiguration.MessageSerializer), invalidParamName);
@@ -82,13 +79,13 @@ namespace AzureClient.Tests.Integration
             Assert.False(string.IsNullOrWhiteSpace(message.Id));
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
-            var azureClient = _queueServiceClient.GetQueueClient(_queueName);
-            var msg = await azureClient.ReceiveMessagesAsync(maxMessages: 1);
+            var queueClient = _queueServiceClient.GetQueueClient(_queueName);
+            var msg = await queueClient.ReceiveMessagesAsync(maxMessages: 1);
 
             var expectedMatch = msg.Value.First();
 
             Assert.Equal(message.Id, expectedMatch.MessageId);
-            await azureClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
+            await queueClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
         }
 
         [Fact]
@@ -104,13 +101,13 @@ namespace AzureClient.Tests.Integration
             Assert.False(string.IsNullOrWhiteSpace(message.Receipt));
 
 
-            var azureClient = _queueServiceClient.GetQueueClient(_queueName);
-            var msg = await azureClient.ReceiveMessagesAsync(maxMessages: 1);
+            var queueClient = _queueServiceClient.GetQueueClient(_queueName);
+            var msg = await queueClient.ReceiveMessagesAsync(maxMessages: 1);
 
             var expectedMatch = msg.Value.First();
 
             Assert.Equal(message.Id, expectedMatch.MessageId);
-            await azureClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
+            await queueClient.DeleteMessageAsync(expectedMatch.MessageId, expectedMatch.PopReceipt);
 
         }
 

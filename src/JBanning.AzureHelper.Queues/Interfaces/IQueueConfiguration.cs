@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AzureClient.Core.Interfaces
+namespace JBanning.AzureHelper.Queues.Interfaces
 {
     public interface IQueueConfiguration
     {
@@ -28,7 +28,7 @@ namespace AzureClient.Core.Interfaces
         /// <summary>
         /// Specify the serializer to use when serializing objects to/from a queue. 
         /// the System.Text.Json is provided as the default provider.
-        /// If External is selected, you must provide your own instance of AzureClient.Core.ISerializer
+        /// If External is selected, you must provide your own instance of JBanning.AzureHelper.Queues.ISerializer
         /// </summary>
         public QueueMessageSerializer MessageSerializer { get; init; }
         /// <summary>

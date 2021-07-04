@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AzureClient.Core.Interfaces
+namespace JBanning.AzureHelper.Queues.Interfaces
 {
     public interface ISerializer
     {

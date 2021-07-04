@@ -1,4 +1,4 @@
-﻿using AzureClient.Core.Interfaces;
+﻿using JBanning.AzureHelper.Queues.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace AzureClient.Services.Serializers
+namespace JBanning.AzureHelper.Queues.Serializers
 {
     public class SystemTextJsonSerializer : ISerializer
     {

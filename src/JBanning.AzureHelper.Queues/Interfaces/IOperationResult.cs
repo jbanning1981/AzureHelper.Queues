@@ -1,4 +1,4 @@
-namespace AzureClient.Core.Interfaces
+namespace JBanning.AzureHelper.Queues.Interfaces
 {
     public interface IOperationResult
     {
