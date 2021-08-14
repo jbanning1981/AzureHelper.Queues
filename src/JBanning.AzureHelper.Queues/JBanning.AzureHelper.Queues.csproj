@@ -2,6 +2,24 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <PackageId>JBanning.AzureHelper.Queues</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>jbanning1981</Authors>
+    <Company>N/A</Company>
+    <PackageDescription>A simple wrapper for serializing and publishing messages to an Azure Queue</PackageDescription>
+    <RepositoryUrl>https://github.com/jbanning1981/AzureHelper.Queues</RepositoryUrl>    
   </PropertyGroup>
 
   <ItemGroup>
