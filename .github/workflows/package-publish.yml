@@ -25,6 +25,6 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal -c Release
     - name: Pack
-      run: dotnet pack -c Release
+      run: dotnet pack -c Release -p:PackageVersion=0.1.0
     - name: Publish
-      run: dotnet nuget push "bin/Release/JBanning.AzureHelper.Queues.0.1.0.nupkg" --api-key GH_API_KEY --source "github"
+      run: dotnet nuget push bin/Release/JBanning.AzureHelper.Queues.0.1.0.nupkg --api-key GH_API_KEY --source "github"
