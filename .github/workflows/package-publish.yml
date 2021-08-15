@@ -21,10 +21,10 @@ jobs:
       with:
         dotnet-version: 5.0.x
     - name: Build
-      run: dotnet build no-restore -c 
+      run: dotnet build -c Release
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal -c Release
     - name: Pack
-      run: dotnet pack -c Release
+      run: dotnet pack -c Release -p:PackageVersion=0.1.0
     - name: Publish
-      run: dotnet nuget push "bin/Release/JBanning.AzureHelper.Queues.0.1.0.nupkg" --api-key GH_API_KEY --source "github"
+      run: dotnet nuget push **/bin/Release/JBanning.AzureHelper.Queues.0.1.0.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
